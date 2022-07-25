@@ -1,5 +1,6 @@
 # repo-1
 first repo for example purposes
+(cannot upload node_modules because it is too many files)
 
 Creates pages linking to each other. Four different pages exist:
 - Home page-Links to three different routes
