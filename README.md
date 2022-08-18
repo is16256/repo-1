@@ -1,5 +1,5 @@
 # repo-1
-Project, currently without usage of JWT.
+Node.js project, currently without usage of JWT.
 
 requires the following:
 
