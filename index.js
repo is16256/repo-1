@@ -1,67 +1,63 @@
-// to start, use npm start.
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3');
 
-var jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken'); // how to use?
 const cors = require('cors');
-const helmet = require('helmet');
+const helmet = require('helmet'); // how to use?
 var bcrypt = require('bcryptjs');
-const auth = require('./middleware.js');
-require('dotenv').config();
 
 const app = express();
 app.use('/public', express.static(path.join(__dirname, 'static')));
 app.use(bodyParser.urlencoded({ extended: false }), cors({ origin: 'http://localhost:3000' }));
 
-var id = -1;
+var id = 0;
 var username = 'Not logged in';
 
 function sanitize(input) {
   for (let i = 0; i < input.length; i++) {
     if (input[i] == "'" || input[i] == '"' || input[i] == "?") {
-      return false;
+      return false;p
     }
   }
   return input.length >= 5;
 }
 
-// create the connection to the database
 let db = new sqlite3.Database('usersdb.db', (err) => {
   if (err) {
     console.error(err.message);
     throw err;
   } else {
-    db.run('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, salt TEXT, token TEXT)', (err) => {
+    db.run('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, salt TEXT)', (err) => {
       if (err) {
         console.error(err.message);
-        res.send('An unknown error occurred.');
+        res.send('An unknown error occurred.<br/><a href="/">Go back.</a>');
       }
     });
   }
 });
-module.exports = db;
 
-// homepage
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'static', 'index.html'));
 });
 
-// create page
-app.get('/create', (req, res) => {
-  res.sendFile(path.join(__dirname, 'static', 'create.html'));
+app.get('/create', (req, res) => { // C
+  if (id == 0) {
+    res.sendFile(path.join(__dirname, 'static', 'create.html'));
+  } else {
+    res.send('You cannot create an account while logged in.<br/><a href="/">Click to go back.</a>');
+  }
 })
 
-// view info page
-app.get('/read', (req, res) => {
+app.get('/read', (req, res) => { // R
   if (id == 0) {
     res.send('You are currently not logged in.<br/><a href="/">Click to go back.</a>');
   } else {
-    res.send(`${token}`, (err) => {res.send('<a href="/">Go back.</a>')});
+    res.send(`Username: ${username}<br/>(ID ${id})<br/><a href="/">Go back.</a>`);
   }
   let sql = 'SELECT * FROM users';
-  db.all(sql, (err, rows) => { // show all in console
+  db.all(sql, (err, rows)=>{ // show all in console
     if (err) {
       console.error(err.message);
       res.send('An unknown error occurred.<br/><a href="/">Go back.</a>');
@@ -74,8 +70,7 @@ app.get('/read', (req, res) => {
   });
 });
 
-// update user info
-app.get('/update', (req, res) => {
+app.get('/update', (req, res) => { // U
   if (id == 0) {
     res.send('You are currently not logged in.<br/><a href="/">Click to go back.</a>');
   } else {
@@ -83,8 +78,7 @@ app.get('/update', (req, res) => {
   }
 });
 
-// delete user
-app.get('/delete', (req, res) => {
+app.get('/delete', (req, res) => { // D
   if (id == 0) {
     res.send('You are currently not logged in.<br/><a href="/">Go back.</a>');
   } else {
@@ -92,16 +86,16 @@ app.get('/delete', (req, res) => {
   }
 });
 
-// login page
 app.get('/loginout', (req, res) => {
   if (id == 0) {
     res.sendFile(path.join(__dirname, 'static', 'login.html'));
   } else {
-    res.send('Already logged in.<br/><a href="/">Go back.</a>');
+    id = 0;
+    username = 'Not logged in';
+    res.send('You have been logged out.<br/><a href="/">Go back.</a>');
   }
 });
 
-// update username
 app.get('/upun', (req, res) => {
   if (id == 0) {
     res.send('You are currently not logged in.<br/><a href="/">Go back.</a>');
@@ -110,7 +104,6 @@ app.get('/upun', (req, res) => {
   }
 });
 
-// update password page
 app.get('/uppwd', (req, res) => {
   if (id == 0) {
     res.send('You are currently not logged in.<br/><a href="/">Go back.</a>');
@@ -119,68 +112,55 @@ app.get('/uppwd', (req, res) => {
   }
 });
 
-// create account
-app.post('/createacc', async (req, res) => {
+app.post('/createacc', (req, res) => {
   let sql = 'INSERT INTO users (username, password, salt) VALUES (?,?,?)';
   let salt = bcrypt.genSaltSync(10);
-  let pw = bcrypt.hashSync(req.body.pwd, salt);
-  
   if (sanitize(req.body.un) && sanitize(req.body.pwd)) {
-    db.run(sql, [req.body.un, pw, salt], (err)=>{
+    db.run(sql, [req.body.un, bcrypt.hashSync(req.body.pwd, salt), salt], (err) => {
       if (err) {
         res.send('This username is already taken.<br/><a href="/create">Click to go back to account creation.</a>');
-        
       } else {
-        res.send('Your account has been created. You may now log in.<br/><a href="/">Go back.</a>');
-        
+        res.send('Your account has been created. You are now logged in.<br/><a href="/">Go back.</a>');
+        username = req.body.un;
+        db.all('SELECT * FROM users WHERE username = ?', username, (err, rows) => {
+          if (err) {
+            console.error(err.message);
+            res.send('An unknown error occurred.<br/><a href="/">Go back.</a>');
+          } else {
+            console.log(rows);
+            id = rows[0]["id"];
+          }
+        });
       }
-    })
-    
+    });
   } else {
     res.send('Your username and/or password is not valid for at least one of:<ul><li>Not being at least 5 characters long</li><li>Not meeting character restrictions</li></ul><a href="/create">Go back to account creation.</a>');
-    
   }
 });
 
-// login
-app.post('/login', async (req, res) => {
+app.post('/login', (req, res) => {
   if (!sanitize(req.body.un)) {
     res.sendFile(path.join(__dirname, 'static', 'fail.html'));
-    
   } else {
     let sql = 'SELECT * FROM users WHERE username = ?';
     db.all(sql, req.body.un, (err, rows) => {
-      if (rows.length == 0 || !sanitize(req.body.pwd)) {
+      if (rows.length == 0) {
         res.sendFile(path.join(__dirname, 'static', 'fail.html'));
-        
       } else {
-        let pw = bcrypt.hashSync(req.body.pwd, user[0]["salt"]);
-        if (pw === rows[0]["password"]) {
-          id = rows[0]["id"];
-          const token = jwt.sign(
-            {
-              id: rows[0]["id"],
-              username: rows[0]["username"],
-            },
-            process.env.TOKEN_KEY,
-            {
-              expiresIn: "1h",
-            }
-          );
-          
-          res.send('You are now logged in.<br/><a href="/">Go back.</a>');
-          
-        } else {
+        if (!sanitize(req.body.pwd) || rows[0]["password"] !== bcrypt.hashSync(req.body.pwd, rows[0]["salt"])) {
           res.sendFile(path.join(__dirname, 'static', 'fail.html'));
+        } else {
+          id = rows[0]["id"];
+          username = req.body.un;
+          res.send('Successfully logged in.<br/><a href="/">Go back to the homepage.</a>');
+          console.log(rows[0]);
         }
       }
     });
-    
   }
 });
 
-// delete account
-app.post('/del', auth, (req, res) => {
+app.post('/del', (req, res) => {
   if (!sanitize(req.body.pwd)) {
     res.send('Failed to delete your account.<br/><a href="/delete">Go back to deletion.</a>');
   } else {
@@ -192,7 +172,7 @@ app.post('/del', auth, (req, res) => {
       } else if (rows.length == 0) {
         res.send('Failed to delete your account.<br/><a href="/delete">Go back to deletion.</a>');
       } else {
-        if (rows[0]["password"] == req.body.pwd) {
+        if (rows[0]["password"] == bcrypt.hashSync(req.body.pwd, rows[0]["salt"])) {
           db.run('DELETE FROM users WHERE id = ?', id, (err) => {
             if (err) {
               console.error(err.message);
@@ -211,8 +191,7 @@ app.post('/del', auth, (req, res) => {
   }
 });
 
-// change username
-app.post('/newun', auth, (req, res) => {
+app.post('/newun', (req, res) => {
   if (!sanitize(req.body.un)) {
     res.send('Failed to change username: username breaks at least one of the character restrictions.<br/><a href="/upun">Choose another username.</a>');
   } else {
@@ -228,8 +207,7 @@ app.post('/newun', auth, (req, res) => {
   }
 });
 
-// change password
-app.post('/newpwd', auth, (req, res) => {
+app.post('/newpwd', (req, res) => {
   if (!sanitize(req.body.opass)) {
     res.send('Failed to change password: incorrect password entered.<br/><a href="/uppwd">Try again.</a>');
   } else {
@@ -245,7 +223,7 @@ app.post('/newpwd', auth, (req, res) => {
         if (!sanitize(req.body.npass)) {
           res.send('Failed to change password: does not meet restrictions.<br/><a href="/uppwd">Try again.</a>');
         } else {
-          db.run('UPDATE users SET password = ? WHERE id = ?', [bcrypt.hashSync(req.body.npass, rows[0]["salt"]), id], (err) => {
+          db.run('UPDATE users SET password = ? WHERE id = ?', [bcrypt.hashSync(req.body.npass, rows[0]["salt"]), id], (err)=>{
             if (err) {
               console.error(err.message);
               res.send('An unknown error occurred.<br/><a href="/">Go back.</a>');
