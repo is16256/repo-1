@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <body>
+    <p>Enter your old password and a new one.</p>
+    <div class="row">
+      <div class="col-lg-4">
+        <form action="/newpwd" method="POST">
+          <label for="opass">Old password:</label>
+          <input type="password" class="form-control" name="opass">
+          <br/>
+          <label for="npass">New password:</label>
+          <input type="password" class="form-control" name="npass">
+          <br/><br/>
+          <button type="submit" class="btn btn-default">Change password</button>
+        </form>
+      </div>
+    </div>
+    <p><a href="/update">Cancel</a></p>
+  </body>
+</html>

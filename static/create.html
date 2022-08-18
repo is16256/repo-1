@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+  <body>
+    <p>Create your account by filling out the fields below.<br/>
+    Both must contain no quotes ("/') or question marks (?) and be at least 5 characters long.</p>
+    <div class="row">
+      <div class="col-lg-4">
+        <form action="/createacc" method="POST">
+          <label for="un">Username:</label>
+          <input type="text" class="form-control" name="un">
+          <br/>
+          <label for="pwd">Password:</label>
+          <input type="password" class="form-control" name="pwd">
+          <br/><br/>
+          <button type="submit" class="btn btn-default">Submit</button>
+        </form>
+      </div>
+    </div>
+    <p><a href="/">Click to go back.</a></p>
+  </body>
+</html>
